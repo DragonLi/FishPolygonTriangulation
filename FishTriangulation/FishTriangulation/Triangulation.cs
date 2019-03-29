@@ -23,16 +23,15 @@ namespace FishTriangulation
         }
         
         private int validCount;
-        public int VertexCount => validCount;
 
-        public List<Triangle> CastToTriangle()
+        private List<Triangle> CastToTriangle()
         {
             var r = new Triangle {a = Points[0], b = Points[1], c = Points[2]};
             var result = new List<Triangle>(1) {r};
             return result;
         }
 
-        public void Prune(int vertex)
+        private void Prune(int vertex)
         {
             //skip check of vertex index < validCount for performance reason
             
@@ -43,7 +42,7 @@ namespace FishTriangulation
             }
         }
 
-        public bool IsConvex(int middleVertex)
+        private bool IsConvex(int middleVertex)
         {
             //if (OrientCCW(middleVertex) * OrientCCW(LowestVertex()) > 0)
             //not xor is same as above with lower cpu & mem footprint
@@ -107,7 +106,7 @@ namespace FishTriangulation
                 Points[next].x * (Points[previous].y - Points[middleVertex].y);
         }
 
-        public bool IsEmpty(int middleVertex)
+        private bool IsEmpty(int middleVertex)
         {
             var previous = middleVertex==0 ? validCount - 1 : middleVertex - 1;
             var next = middleVertex==validCount-1 ? 0 : middleVertex + 1;
@@ -127,7 +126,7 @@ namespace FishTriangulation
             return true;
         }
 
-        public Triangle GetTriangleAt(int middleVertex)
+        private Triangle GetTriangleAt(int middleVertex)
         {
             var previous = middleVertex==0 ? validCount - 1 : middleVertex - 1;
             var next = middleVertex==validCount-1 ? 0 : middleVertex + 1;
@@ -152,8 +151,7 @@ namespace FishTriangulation
             {
                 for (int j = 0; j < vertexCount; j++)
                 {
-                    var t = new Triangle();
-                    t = GetTriangleAt(j);
+                    var t = GetTriangleAt(j);
                     if (IsConvex(j) && IsEmpty(j))
                     {
                         result.Add(t);
