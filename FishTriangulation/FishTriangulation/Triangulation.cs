@@ -12,6 +12,11 @@ namespace FishTriangulation
         public float x, y;
     }
 
+    public class TriangleIndex
+    {
+        public int a, b, c;
+    }
+
     public class Polygon2D //avoid name conflict of "polygon"
     {
         private List<Point2D> Points;
@@ -35,11 +40,29 @@ namespace FishTriangulation
         {
             //skip check of vertex index < validCount for performance reason
             
+            lowest = null;//simple way to must sure new lowest is computed again, don't check whether the lowest is changed
             validCount--;
             for (int i = vertex; i < validCount; i++)
             {
                 Points[i] = Points[i + 1];
             }
+        }
+
+        private bool IsConvex(TriangleIndex tri)
+        {
+            //if (OrientCCW(middleVertex) * OrientCCW(LowestVertex()) > 0)
+            //not xor is same as above with lower cpu & mem footprint
+            if (!(OrientCCW(tri) ^ LowestCCWOrient()))
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        private bool OrientCCW(TriangleIndex tri)
+        {
+            return ccw(tri.a, tri.b, tri.c) > 0;
         }
 
         private bool IsConvex(int middleVertex)
@@ -54,6 +77,25 @@ namespace FishTriangulation
             return false;
         }
 
+        private TriangleIndex lowest;
+        private bool lowestCCW;
+
+        private bool LowestCCWOrient()
+        {
+            if (lowest != null)
+                return lowestCCW;
+            lowestCCW = OrientCCW(LowestTri());
+            return lowestCCW;
+        }
+
+        private TriangleIndex LowestTri()
+        {
+            if (lowest != null)
+                return lowest;
+            var lowestIndex = LowestVertex();
+            lowest=GetTriangleIndex(lowestIndex);
+            return lowest;
+        }
         private int LowestVertex()
         {
             //no cache of lowest vertex now, if has one, it must be deleted after prune
@@ -106,6 +148,27 @@ namespace FishTriangulation
                 Points[next].x * (Points[previous].y - Points[middleVertex].y);
         }
 
+        private bool IsEmpty(TriangleIndex tri)
+        {
+            var previous = tri.a;
+            var middleVertex = tri.b;
+            var next = tri.c;
+            var tsv = SignCCW(previous, middleVertex, next);
+            for (int i = 0; i < validCount; i++)
+            {
+                if (i==previous || i==middleVertex || i==next)
+                    continue;
+                if (tsv * SignCCW(middleVertex, previous, i) >= 0 &&
+                    tsv * SignCCW(previous, next, i) >= 0 &&
+                    tsv * SignCCW(next, middleVertex, i) >= 0)
+                {
+                    return false;//vertex i is inside triangle with middle vertex at middleVertex 
+                }
+            }
+
+            return true;
+        }
+
         private bool IsEmpty(int middleVertex)
         {
             var previous = middleVertex==0 ? validCount - 1 : middleVertex - 1;
@@ -126,11 +189,17 @@ namespace FishTriangulation
             return true;
         }
 
-        private Triangle GetTriangleAt(int middleVertex)
+        private TriangleIndex GetTriangleIndex(int middleVertex)
         {
             var previous = middleVertex==0 ? validCount - 1 : middleVertex - 1;
             var next = middleVertex==validCount-1 ? 0 : middleVertex + 1;
-            var result = new Triangle {a = Points[previous], b = Points[middleVertex], c = Points[next]};
+            var result = new TriangleIndex {a = previous, b = middleVertex, c = next};
+            return result;
+        }
+
+        private Triangle GetTriangleAt(TriangleIndex tri)
+        {
+            var result = new Triangle {a = Points[tri.a], b = Points[tri.b], c = Points[tri.c]};
             return result;
         }
         
@@ -151,9 +220,10 @@ namespace FishTriangulation
             {
                 for (int j = 0; j < vertexCount; j++)
                 {
-                    var t = GetTriangleAt(j);
-                    if (IsConvex(j) && IsEmpty(j))
+                    var trInd = GetTriangleIndex(j);
+                    if (IsConvex(trInd) && IsEmpty(trInd))
                     {
+                        var t = GetTriangleAt(trInd);
                         result.Add(t);
                         vertexCount--;
                         Prune(j);
@@ -164,6 +234,5 @@ namespace FishTriangulation
             
             return result;
         }
-
     }
 }
